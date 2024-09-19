@@ -1,83 +1,114 @@
+from linecache import cache
 from typing import List
-from Task import Task as Task
-from Status import Status as Status
 import os
+from Task import Task
+from Status import Status
 
-taskList: List[Task] = []
-taskFile = "tasks.txt"
+# Constants
+TASK_FILE = "tasks.txt"
+
+# Task List
+tasks: List[Task] = []
 
 
-def display_all_tasks():
-    print(taskList)
-
-
-def get_status_from_text(text: str) -> Status:
-    return Status.from_string(text)
+def display_all_tasks() -> None:
+    """Display all tasks in the list."""
+    print(tasks)
 
 
 def convert_line_to_task(line: str) -> Task:
     task_and_status = line.split(":")
-    task = Task(task_and_status[0].strip(), get_status_from_text(task_and_status[1].strip()))
+    if len(task_and_status) != 2:
+        raise ValueError(f' : is only allowed once in the line, between the description and the status')
+    task = Task(task_and_status[0].strip(), Status.from_string(task_and_status[1].strip()))
     return task
 
 
-def update_task_status(task: Task, new_status: Status) -> Task:
-    task.status = new_status
-    return task
-
-
-def update_task_in_list(task: Task) -> None:
-    task_index = taskList.index(get_task_by_name(task.description))
-    task_to_update = taskList[task_index]
-    task_to_update.description = task.description
-    task_to_update.status = task.status
-    taskList[task_index] = task_to_update
-    write_tasks_to_file()
-
-
-def add_task_to_list(task: Task) -> None:
-    if get_task_by_name(task.description) is not None:
-        raise ValueError(f'Task "{task.description}" already exists')
-    taskList.append(task)
-    print(f' Added task: \n {task} \n')
-    write_tasks_to_file()
+def initialize_task_list() -> None:
+    """Initialize the task list by loading tasks from a file."""
+    global tasks
+    tasks.clear()
+    unique_tasks = set()
+    if os.path.exists(TASK_FILE):
+        with open(TASK_FILE, "r") as file:
+            for line in file:
+                task = convert_line_to_task(line)
+                if task.description not in unique_tasks:
+                    tasks.append(task)
+                    unique_tasks.add(task.description)
 
 
 def get_task_by_name(description: str) -> Task:
-    for task in taskList:
+    """Retrieve a task by its description."""
+    for task in tasks:
         if task.description.casefold() == description.casefold():
             return task
     return None
 
 
-def _init_task_list():
-    global taskList
-    taskList.clear()  # Clear the task list to avoid duplicates
-    seen_tasks = set()
+def update_task_in_list(task: Task) -> None:
+    """Update an existing task in the list."""
+    task_index = tasks.index(get_task_by_name(task.description))
+    tasks[task_index] = Task(task.description, task.status)
+    write_tasks_to_file()
 
-    if os.path.exists(taskFile):
-        with open(taskFile, "r") as file:
-            for line in file:
-                task = convert_line_to_task(line)
-                if task.description not in seen_tasks:
-                    taskList.append(task)
-                    seen_tasks.add(task.description)
+
+def add_task_to_list(task: Task) -> None:
+    """Add a new task to the list."""
+    if get_task_by_name(task.description) is not None:
+        raise ValueError(f'Task "{task.description}" already exists')
+    if ":" in task.description:
+        raise ValueError(f'Task "{task.description}" contains invalid character: ":"')
+    tasks.append(task)
+    log_task_action('Added', task)
+    write_tasks_to_file()
+
+
+def delete_task_from_list(task: Task) -> None:
+    found_task = get_task_by_name(task.description)
+    if found_task is None:
+        raise ValueError(f'Task "{task.description}" does not exist')
+    tasks.remove(found_task)
+    log_task_action('Deleted', found_task)
+    write_tasks_to_file()
 
 
 def write_tasks_to_file() -> None:
-    with open(taskFile, "w") as file:
-        for task in taskList:
+    """Write the current list of tasks to the file."""
+    with open(TASK_FILE, "w") as file:
+        for task in tasks:
             file.write(f"{task.description} : {task.status.value}\n")
 
 
-# Initialize task list (load from file) and display initial tasks
-_init_task_list()
-print("Initial Tasks:")
-display_all_tasks()
+def log_task_action(action: str, task: Task) -> None:
+    """Log task actions like adding or updating."""
+    print(f'{action} task: \n {task} \n')
 
-# Add a new task
-add_task_to_list(Task("Something to do"))
 
-print("Updating Task:")
-update_task_in_list(Task("Something to do", Status.COMPLETED))
-display_all_tasks()
+def main():
+    """Main function to initialize and display tasks."""
+    initialize_task_list()
+    print("Initial Tasks:")
+    display_all_tasks()
+
+    add_task_to_list(Task("Something to do"))
+
+    print('Adding invalid task due to multiple : :')
+    try:
+        add_task_to_list(Task("read the book:  python for dummies"))
+    except ValueError as e:
+        print(e)
+
+    # print("Updating Task:")
+    update_task_in_list(Task("Something to do", Status.COMPLETED))
+    display_all_tasks()
+
+    # print("Deleting Task:")
+    delete_task_from_list(Task("Something to do"))
+
+    print("Final Tasks:")
+    display_all_tasks()
+
+
+if __name__ == "__main__":
+    main()
