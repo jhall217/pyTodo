@@ -6,10 +6,10 @@ from Status import Status
 
 @dataclass
 class Task:
-    description : str
-    status : Status
+    description: str
+    status: Status
 
-    def __init__(self, description: str, status: Union[str, Status] = 'Not Complete'):
+    def __init__(self, description: str, status: Union[str, Status] = Status.NOT_COMPLETED):
         self.description = description
         if isinstance(status, str):
             self.status = Status.from_string(status)
@@ -19,7 +19,7 @@ class Task:
             raise TypeError("status must be either a str or a Status instance")
 
     @classmethod
-    def from_strings(cls, description: str, status: str = 'Not Complete') -> 'Task':
+    def from_strings(cls, description: str, status: str = Status.NOT_COMPLETED.value) -> 'Task':
         return cls(description, status)
 
     @classmethod
