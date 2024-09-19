@@ -1,3 +1,4 @@
 Learn Python : In Progress
 Upload project to GitHub : Complete
 Finish app : Not Complete
+Something to do : Complete
