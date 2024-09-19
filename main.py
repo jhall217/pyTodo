@@ -1,3 +1,4 @@
+from linecache import cache
 from typing import List
 import os
 from Task import Task
@@ -15,16 +16,11 @@ def display_all_tasks() -> None:
     print(tasks)
 
 
-def get_status_from_text(text: str) -> Status:
-    """Convert text to Status enum."""
-    return Status.from_string(text)
-
-
 def convert_line_to_task(line: str) -> Task:
     task_and_status = line.split(":")
     if len(task_and_status) != 2:
         raise ValueError(f' : is only allowed once in the line, between the description and the status')
-    task = Task(task_and_status[0].strip(), get_status_from_text(task_and_status[1].strip()))
+    task = Task(task_and_status[0].strip(), Status.from_string(task_and_status[1].strip()))
     return task
 
 
@@ -68,6 +64,15 @@ def add_task_to_list(task: Task) -> None:
     write_tasks_to_file()
 
 
+def delete_task_from_list(task: Task) -> None:
+    found_task = get_task_by_name(task.description)
+    if found_task is None:
+        raise ValueError(f'Task "{task.description}" does not exist')
+    tasks.remove(found_task)
+    log_task_action('Deleted', found_task)
+    write_tasks_to_file()
+
+
 def write_tasks_to_file() -> None:
     """Write the current list of tasks to the file."""
     with open(TASK_FILE, "w") as file:
@@ -88,12 +93,21 @@ def main():
 
     add_task_to_list(Task("Something to do"))
 
-    print("Updating Task:")
+    print('Adding invalid task due to multiple : :')
+    try:
+        add_task_to_list(Task("read the book:  python for dummies"))
+    except ValueError as e:
+        print(e)
+
+    # print("Updating Task:")
     update_task_in_list(Task("Something to do", Status.COMPLETED))
     display_all_tasks()
 
-    print('Adding invalid task due to multiple : :')
-    add_task_to_list(Task("read the book:  python for dummies"))
+    # print("Deleting Task:")
+    delete_task_from_list(Task("Something to do"))
+
+    print("Final Tasks:")
+    display_all_tasks()
 
 
 if __name__ == "__main__":
